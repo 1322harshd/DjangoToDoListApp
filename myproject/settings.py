@@ -25,15 +25,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-79bp1)l1h7ih@%*e-f70mranmwb^2m3^kkcl3pa6cx0x_-#2)7'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-if 'PYTHONPATH' in os.environ:
-    Debug = False
-    # Debug = False
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+ 
+ALLOWED_HOSTS = ['*']
+ 
+# Check environment and configure accordingly
+if 'VERCEL' in os.environ:
+    # Vercel production deployment
+    #DEBUG = False
+    DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+    ALLOWED_HOSTS = [
+        '.vercel.app',
+    ]
+elif 'PYTHONPATH' in os.environ:
+    # AWS Elastic Beanstalk or other production
+    DEBUG = False
     ALLOWED_HOSTS = ['.ap-southeast-2.elasticbeanstalk.com']
 else:
-    # SECURITY WARNING: don't run with debug turned on in production!
+    # Development mode (Replit or local)
     DEBUG = True
-    ALLOWED_HOSTS = []
-
+    ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -57,6 +68,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -64,7 +76,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 ROOT_URLCONF = 'myproject.urls'
 
 TEMPLATES = [
@@ -136,7 +147,19 @@ SIMPLE_JWT = {
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
  
-if 'RDS_DB_NAME' in os.environ:
+# Database
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+if 'DATABASE_URL' in os.environ:
+    # Supabase PostgreSQL (Vercel deployment)
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+elif 'RDS_DB_NAME' in os.environ:
     DATABASES = {
             'default': {
                 'ENGINE':'django.db.backends.postgresql_psycopg2',
@@ -153,12 +176,11 @@ else:
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
             'NAME': 'todoapp_db',
             'USER': 'postgres',
-            'PASSWORD': '13Dhillon@nz',#'This is the password for your local postgres pgadmin'
+            'PASSWORD': '13Dhillon@nz',#'This is the password for your local postgres pgladmin'
             'HOST': '', #'Localhost is empty'
             'PORT':'', #Assumes default as 5432
         },
     }
- 
 
 
 # Password validation
@@ -221,6 +243,11 @@ if 'S3_BUCKET' in os.environ:
 else:
     STATIC_URL = '/static/'
     STATIC_ROOT = os.path.join(BASE_DIR, "www", "static")
+
+# WhiteNoise configuration for Vercel static file serving
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
